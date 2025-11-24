@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>대전 도트 맵</title>
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      /* 전체를 흑백으로 만들고 싶다면 이 주석을 해제
+      filter: grayscale(1);
+      */
+    }
+
+    /* ===== 하단 중앙 툴바 (펼쳐진 상태) ===== */
+    #toolbar {
+      position: absolute;
+      z-index: 9999;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      padding: 14px 16px 16px;
+      background: rgba(255, 255, 255, 0.97);
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+      max-width: 520px;
+      width: calc(100% - 40px);
+      box-sizing: border-box;
+      font-size: 12px;
+    }
+
+    #toolbar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    #toolbar-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    #toolbar-close {
+      border: none;
+      background: none;
+      font-size: 12px;
+      cursor: pointer;
+      color: #4b5563;
+      padding: 6px 10px;
+      border-radius: 999px;
+    }
+
+    #toolbar-close:hover {
+      background: #e5e7eb;
+    }
+
+    /* ===== 팔레트 ===== */
+    #palette {
+      display: grid;
+      grid-template-columns: repeat(9, minmax(0, 1fr));
+      gap: 6px;
+      justify-items: center;
+      margin-top: 4px;
+    }
+
+    .color-option {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s, border-color 0.15s;
+      box-sizing: border-box;
+    }
+
+    .color-option:hover {
+      background: #f3f4f6;
+    }
+
+    .color-option.selected {
+      border-color: #111827;
+      background: #e5e7eb;
+    }
+
+    .color-swatch {
+      width: 56px;
+      height: 24px;
+      border-radius: 4px;
+      border: 1px solid rgba(0,0,0,0.25);
+      box-sizing: border-box;
+    }
+
+    .color-swatch.transparent {
+      background: repeating-conic-gradient(
+        #ccc 0% 25%,
+        white 0% 50%
+      );
+      background-size: 8px 8px;
+    }
+
+    /* ===== 접힌 상태 버튼 (하단 중앙) ===== */
+    #toolbar-toggle {
+      position: absolute;
+      z-index: 9999;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%);
+      min-width: 140px;
+      padding: 14px 16px;
+      border-radius: 999px;
+      border: none;
+      background: #1a64f7;
+      color: #fff;
+      font-size: 16px;
+      font-weight: bold;
+      line-height: calc(1em - 1px);
+      text-align: center;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+      display: none; /* 기본은 펼쳐진 상태라 숨김 */
+       transition: 0.3s;
+    }
+
+    #toolbar-toggle:hover {
+      background: #0049df;
+    }
+
+    /* ===== 우측 하단 투명도 토글 버튼 ===== */
+    #dim-toggle {
+      position: absolute;
+      z-index: 9999;
+      right: 16px;
+      bottom: 24px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: none;
+      background: #1a64f7;
+      color: #fff;
+      font-size: 13px;
+      text-align: center;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+       transition: 0.3s;
+    }
+
+    #dim-toggle:hover {
+      background: #0049df;
+      animation: ;
+    }
+
+    @media (max-width: 480px) {
+      #palette {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- 하단 중앙 툴바 (펼쳐진 상태) -->
+  <div id="toolbar">
+    <div id="toolbar-header">
+      <div id="toolbar-title">색상 선택</div>
+      <button id="toolbar-close">접기</button>
+    </div>
+    <div id="palette"></div>
+  </div>
+
+  <!-- 접힌 상태일 때 보이는 하단 중앙 버튼 -->
+  <button id="toolbar-toggle">그리기</button>
+
+  <!-- 우측 하단: 도트 투명도 토글 버튼 -->
+  <button id="dim-toggle">지도 보기</button>
+
+  <!-- 지도 -->
+  <div id="map"></div>
+
+  <!-- Leaflet JS -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <!-- Firebase SDK (compat 버전) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <script>
+    // =========================
+    // 1. Firebase 설정
+    // =========================
+    const firebaseConfig = {
+      apiKey: "AIzaSyCqCMo_m1aLBhQE7HmZWEXyrlh1KkbrwKk",
+      authDomain: "dotmap-2fbd7.firebaseapp.com",
+      projectId: "dotmap-2fbd7",
+      storageBucket: "dotmap-2fbd7.firebasestorage.app",
+      messagingSenderId: "94777171702",
+      appId: "1:94777171702:web:3c5da1a5e839734fcd56d7",
+      measurementId: "G-VFKSQXS35N"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // =========================
+    // 2. 색상 팔레트 정의
+    // =========================
+    const COLOR_PALETTE = [
+      { key: 'black',       nameKr: '블랙',           css: '#000000' },
+      { key: 'darkgray',    nameKr: '다크 그레이',     css: '#4b5563' },
+      { key: 'gray',        nameKr: '그레이',         css: '#9ca3af' },
+      { key: 'lightgray',   nameKr: '라이트 그레이',   css: '#d1d5db' },
+      { key: 'white',       nameKr: '화이트',         css: '#ffffff' },
+
+      { key: 'deepred',     nameKr: '딥 레드',        css: '#7f1d1d' },
+      { key: 'red',         nameKr: '레드',           css: '#ef4444' },
+      { key: 'orange',      nameKr: '오렌지',         css: '#f97316' },
+      { key: 'gold',        nameKr: '골드',           css: '#fbbf24' },
+      { key: 'yellow',      nameKr: '옐로우',         css: '#facc15' },
+      { key: 'lightyellow', nameKr: '라이트 옐로우',   css: '#fef9c3' },
+
+      { key: 'darkgreen',   nameKr: '다크 그린',       css: '#14532d' },
+      { key: 'green',       nameKr: '그린',           css: '#22c55e' },
+      { key: 'lightgreen',  nameKr: '라이트 그린',     css: '#bbf7d0' },
+
+      { key: 'darkteal',    nameKr: '다크 틸',         css: '#0f766e' },
+      { key: 'teal',        nameKr: '틸',             css: '#14b8a6' },
+      { key: 'lightteal',   nameKr: '라이트 틸',       css: '#99f6e4' },
+
+      { key: 'darkblue',    nameKr: '다크 블루',       css: '#1e3a8a' },
+      { key: 'blue',        nameKr: '블루',           css: '#3b82f6' },
+      { key: 'cyan',        nameKr: '시안',           css: '#06b6d4' },
+      { key: 'indigo',      nameKr: '인디고',         css: '#4f46e5' },
+      { key: 'lightindigo', nameKr: '라이트 인디고',   css: '#e0e7ff' },
+
+      { key: 'darkpurple',  nameKr: '다크 퍼플',       css: '#581c87' },
+      { key: 'purple',      nameKr: '퍼플',           css: '#a855f7' },
+      { key: 'lightpurple', nameKr: '라이트 퍼플',     css: '#e9d5ff' },
+
+      { key: 'darkpink',    nameKr: '다크 핑크',       css: '#9d174d' },
+      { key: 'pink',        nameKr: '핑크',           css: '#ec4899' },
+      { key: 'lightpink',   nameKr: '라이트 핑크',     css: '#f9a8d4' },
+
+      { key: 'darkbrown',   nameKr: '다크 브라운',     css: '#4a2511' },
+      { key: 'brown',       nameKr: '브라운',         css: '#92400e' },
+      { key: 'beige',       nameKr: '베이지',         css: '#f5e7d3' },
+
+      { key: 'transparent', nameKr: '투명 (지우개)',   css: 'transparent' }
+    ];
+
+    const COLOR_MAP = COLOR_PALETTE.reduce((acc, c) => {
+      acc[c.key] = c.css;
+      return acc;
+    }, {});
+
+    let currentColorKey = 'black';
+
+    function initPaletteUI() {
+      const paletteEl = document.getElementById('palette');
+      paletteEl.innerHTML = '';
+
+      COLOR_PALETTE.forEach((c, index) => {
+        const item = document.createElement('div');
+        item.className = 'color-option' + (index === 0 ? ' selected' : '');
+        item.dataset.colorKey = c.key;
+
+        const swatch = document.createElement('div');
+        swatch.className = 'color-swatch' + (c.key === 'transparent' ? ' transparent' : '');
+        if (c.key !== 'transparent') {
+          swatch.style.background = c.css;
+        }
+        // 마우스 오버 시 한글 색 이름
+        swatch.title = c.nameKr;
+
+        item.appendChild(swatch);
+        paletteEl.appendChild(item);
+
+        item.addEventListener('click', () => {
+          currentColorKey = c.key;
+          document.querySelectorAll('.color-option').forEach(el => {
+            el.classList.remove('selected');
+          });
+          item.classList.add('selected');
+        });
+      });
+    }
+
+    // =========================
+    // 3. Leaflet 지도 설정
+    // =========================
+    const daejeonCenter = [36.3504, 127.3845];
+
+    const MIN_ZOOM = 13;
+    const MAX_ZOOM = 18;
+    const INITIAL_ZOOM = 16;
+
+    const map = L.map('map', {
+      center: daejeonCenter,
+      zoom: INITIAL_ZOOM,
+      minZoom: MIN_ZOOM,
+      maxZoom: MAX_ZOOM,
+      zoomControl: true,
+      scrollWheelZoom: true,
+      doubleClickZoom: true,
+      boxZoom: true,
+      touchZoom: true
+    });
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+      maxZoom: 18
+    }).addTo(map);
+
+    const bounds = L.latLngBounds(
+      [36.25, 127.30],
+      [36.45, 127.48]
+    );
+    map.setMaxBounds(bounds);
+    map.on('drag', function () {
+      map.panInsideBounds(bounds, { animate: false });
+    });
+
+    // =========================
+    // 4. 격자 / 상태 설정 (월드 픽셀 기준)
+    // =========================
+    const GRID_ZOOM = 14;
+    const CELL_SIZE = 2;  // 도트 크기
+
+    const cells = {};   // id -> L.rectangle
+    let hoverRect = null;
+    let dotsDimmed = false;      // 도트 투명도 상태
+    let drawingEnabled = true;   // 툴바 접힌 상태에서는 false
+
+    function snapLatLngToGrid(latlng) {
+      const pt = map.project(latlng, GRID_ZOOM);
+      const gridX = Math.floor(pt.x / CELL_SIZE);
+      const gridY = Math.floor(pt.y / CELL_SIZE);
+
+      const centerPx = L.point(
+        gridX * CELL_SIZE + CELL_SIZE / 2,
+        gridY * CELL_SIZE + CELL_SIZE / 2
+      );
+
+      const centerLatLng = map.unproject(centerPx, GRID_ZOOM);
+      const id = `${gridX}_${gridY}`;
+
+      return {
+        id,
+        gridX,
+        gridY,
+        centerLatLng
+      };
+    }
+
+    function getCellBoundsFromGrid(gridX, gridY) {
+      const topLeftPx = L.point(gridX * CELL_SIZE, gridY * CELL_SIZE);
+      const bottomRightPx = L.point((gridX + 1) * CELL_SIZE, (gridY + 1) * CELL_SIZE);
+
+      const topLeftLatLng = map.unproject(topLeftPx, GRID_ZOOM);
+      const bottomRightLatLng = map.unproject(bottomRightPx, GRID_ZOOM);
+
+      return L.latLngBounds(topLeftLatLng, bottomRightLatLng);
+    }
+
+    // =========================
+    // 5. 도트(정사각형 셀) 생성 & 관리
+    // =========================
+    function createCellRect(bounds, colorCss) {
+      return L.rectangle(bounds, {
+        stroke: false,
+        fill: true,
+        fillColor: colorCss,
+        fillOpacity: dotsDimmed ? 0.3 : 1,
+        interactive: false
+      });
+    }
+
+    function upsertCell(id, data) {
+      const colorKey = data && data.colorKey;
+
+      // colorKey가 없거나 투명(지우개)이면 셀 제거
+      if (!colorKey || colorKey === 'transparent') {
+        removeCell(id);
+        return;
+      }
+
+      const [gridXStr, gridYStr] = id.split('_');
+      const gridX = parseInt(gridXStr, 10);
+      const gridY = parseInt(gridYStr, 10);
+      if (Number.isNaN(gridX) || Number.isNaN(gridY)) return;
+
+      const bounds = getCellBoundsFromGrid(gridX, gridY);
+      const css = COLOR_MAP[colorKey] || '#000000';
+
+      if (cells[id]) {
+        map.removeLayer(cells[id]);
+      }
+
+      const rect = createCellRect(bounds, css);
+      rect.addTo(map);
+      cells[id] = rect;
+    }
+
+    function removeCell(id) {
+      if (cells[id]) {
+        map.removeLayer(cells[id]);
+        delete cells[id];
+      }
+    }
+
+    function applyDotsOpacity() {
+      const targetOpacity = dotsDimmed ? 0.3 : 1;
+      Object.keys(cells).forEach(id => {
+        cells[id].setStyle({ fillOpacity: targetOpacity });
+      });
+    }
+
+    // =========================
+    // 6. 마우스 하이라이트 셀 처리
+    // =========================
+    map.on('mousemove', (e) => {
+      const snapped = snapLatLngToGrid(e.latlng);
+      const bounds = getCellBoundsFromGrid(snapped.gridX, snapped.gridY);
+
+      if (!hoverRect) {
+        hoverRect = L.rectangle(bounds, {
+          color: '#1a64f7',
+          weight: 2,
+          fill: true,
+          fillOpacity: 0.15,
+          interactive: false
+        }).addTo(map);
+      } else {
+        hoverRect.setBounds(bounds);
+      }
+    });
+
+    map.getContainer().addEventListener('mouseleave', () => {
+      if (hoverRect) {
+        map.removeLayer(hoverRect);
+        hoverRect = null;
+      }
+    });
+
+    // =========================
+    // 7. 지도 클릭 이벤트 (도트 저장 / 지우개)
+    // =========================
+    map.on('click', async (e) => {
+      // 툴바 접힌 상태에서는 도트 안 찍히게
+      if (!drawingEnabled) return;
+
+      const snapped = snapLatLngToGrid(e.latlng);
+      const { id, centerLatLng } = snapped;
+
+      // 투명(지우개): 해당 셀을 "transparent"로 업데이트 (소프트 삭제)
+      if (currentColorKey === 'transparent') {
+        try {
+          await db.collection('dots').doc(id).set(
+            { colorKey: 'transparent' },
+            { merge: true }
+          );
+          // upsertCell에서 colorKey === 'transparent'면 removeCell(id) 처리됨
+        } catch (err) {
+          console.error('셀 투명 처리 실패:', err);
+        }
+        return; // 지우개 모드에서는 여기서 끝
+      }
+
+      // 일반 색상 모드: 그리드에 맞춰 저장(덮어쓰기)
+      try {
+        await db.collection('dots').doc(id).set({
+          lat: centerLatLng.lat,
+          lng: centerLatLng.lng,
+          colorKey: currentColorKey,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true }); // merge:true로 update/create 모두 커버
+      } catch (err) {
+        console.error('도트 저장 실패:', err);
+      }
+    });
+
+    // =========================
+    // 8. Firestore 실시간 리스너
+    // =========================
+    db.collection('dots')
+      .onSnapshot((snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          const id = change.doc.id;
+          const data = change.doc.data();
+
+          if (change.type === 'added' || change.type === 'modified') {
+            upsertCell(id, data);
+          } else if (change.type === 'removed') {
+            removeCell(id);
+          }
+        });
+      });
+
+    // =========================
+    // 9. 툴바 접기/펼치기 + 도트 투명도 버튼
+    // =========================
+    const toolbarEl = document.getElementById('toolbar');
+    const toolbarToggleEl = document.getElementById('toolbar-toggle');
+    const toolbarCloseBtn = document.getElementById('toolbar-close');
+    const dimToggleBtn = document.getElementById('dim-toggle');
+
+    // 접기 → 그리기 OFF
+    toolbarCloseBtn.addEventListener('click', () => {
+      toolbarEl.style.display = 'none';
+      toolbarToggleEl.style.display = 'inline-flex';
+      drawingEnabled = false;
+    });
+
+    // "그리기" 클릭 → 다시 펼치기 + 그리기 ON
+    toolbarToggleEl.addEventListener('click', () => {
+      toolbarEl.style.display = 'block';
+      toolbarToggleEl.style.display = 'none';
+      drawingEnabled = true;
+    });
+
+    // 도트 투명도 토글
+    dimToggleBtn.addEventListener('click', () => {
+      dotsDimmed = !dotsDimmed;
+      applyDotsOpacity();
+      dimToggleBtn.textContent = dotsDimmed ? '도트 보기' : '지도 보기';
+    });
+
+    // =========================
+    // 10. 초기화
+    // =========================
+    initPaletteUI();
+  </script>
+</body>
+</html>
