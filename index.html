@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>대전 도트 맵</title>
+  <title>대전 커뮤니케이션 맵</title>
 
   <!-- Leaflet CSS -->
   <link
@@ -87,20 +87,20 @@
       justify-content: center;
       padding: 0;
       border-radius: 8px;
-      border: 1px solid transparent;
       cursor: pointer;
       user-select: none;
+      border: 3px solid transparent;
       transition: background 0.15s, border-color 0.15s;
       box-sizing: border-box;
     }
 
     .color-option:hover {
-      background: #f3f4f6;
+      background: #fff;
     }
 
     .color-option.selected {
-      border-color: #111827;
-      background: #e5e7eb;
+      border: 3px solid #1a64f7;
+      background: #fff;
     }
 
     .color-swatch {
@@ -176,9 +176,69 @@
       #palette {
         grid-template-columns: repeat(6, minmax(0, 1fr));
       }
+            /* 툴바 전체 크기 증가 */
+      #toolbar {
+        padding: 16px 18px;
+        border-radius: 16px;
+        max-width: 600px;
+        width: calc(100% - 20px);
+      }
+
+      /* "색상 선택" 제목 크기 증가 */
+      #toolbar-title {
+        font-size: 16px;
+      }
+
+      /* 툴바의 close 버튼 */
+      #toolbar-close {
+        font-size: 15px;
+        padding: 4px 10px;
+      }
+
+      /* 팔레트 - 6칸 그리드 유지하지만 셀 사이 간격 넓히기 */
+      #palette {
+        gap: 10px;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        margin-top: 8px;
+      }
+
+      /* 컬러 선택 박스 전체 크기 증가 */
+      .color-option {
+        padding: 6px;
+        border-radius: 10px;
+      }
+
+      /* 실제 색상 네모 박스 확대 */
+      .color-swatch {
+        width: 60px;
+        height: 32px;
+        border-radius: 6px;
+      }
+
+      /* 선택한 색상 강조 유지 */
+      .color-option.selected {
+        border-width: 2px;
+      }
+
+      /* 하단 "그리기" 버튼 */
+      #toolbar-toggle {
+        font-size: 15px;
+        padding: 12px 22px;
+        min-width: 180px;
+      }
+
+      /* 우측 하단 "지도 보기" 버튼 */
+      #dim-toggle {
+        font-size: 14px;
+        padding: 10px 16px;
+      }
     }
   </style>
 </head>
+
+
+
+
 <body>
   <!-- 하단 중앙 툴바 (펼쳐진 상태) -->
   <div id="toolbar">
@@ -556,4 +616,3 @@
   </script>
 </body>
 </html>
-
