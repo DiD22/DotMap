@@ -6,7 +6,7 @@
   <title>대전 커뮤니케이션 맵</title>
 
   <link rel="icon" href="./DotMapFavicon.png" type="image/png" />
-
+  
   <!-- Leaflet CSS -->
   <link
     rel="stylesheet"
@@ -26,7 +26,7 @@
     #map {
       width: 100%;
       height: 100%;
-      /* 전체를 흑백으로 만들고 싶다면 이 주석을 해제
+      /* 지도 전체를 흑백
       filter: grayscale(1);
       */
     }
@@ -93,8 +93,9 @@
       border-radius: 8px;
       cursor: pointer;
       user-select: none;
-      border: 3px solid transparent;
+      border: 4px solid transparent;
       outline: none;
+      outline-offset: -2px;
       transition: 0.2s;
       box-sizing: border-box;
     }
@@ -104,8 +105,9 @@
     }
 
     .color-option.selected {
-      border: 3px solid #fff;
+      border: 4px solid #fff;
       outline: 2px solid #1a64f7;
+      outline-offset: -2px;
       background: #fff;
     }
 
@@ -177,43 +179,57 @@
       background: #0049df;
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 480px) {
       #palette {
         grid-template-columns: repeat(6, minmax(0, 1fr));
       }
-            /* 툴바 전체 크기 증가 */
       #toolbar {
-        padding: 16px 18px;
-        border-radius: 16px;
+        padding: 12px 14px;
+        border-radius: 14px;
         max-width: 600px;
         width: calc(100% - 20px);
+
+        /* 핵심: 높이 제한 + 내부 스크롤 구조 */
+        max-height: 18vh;
+        display: flex;
+        flex-direction: column;
+        bottom: 20px;
       }
 
-      /* "색상 선택" 제목 크기 증가 */
+      #toolbar-header {
+        margin-bottom: 8px;
+        flex-shrink: 0;
+      }
+
+      /* "색상 선택" 제목 크기 */
       #toolbar-title {
-        font-size: 16px;
+        font-size: 15px;
       }
 
-      /* 툴바의 close 버튼 */
+      /* 닫기 버튼 */
       #toolbar-close {
-        font-size: 15px;
+        font-size: 14px;
         padding: 4px 10px;
       }
 
+      /* 팔레트: 스크롤 가능한 영역으로 만들기 */
       #palette {
         gap: 4px;
         grid-template-columns: repeat(6, minmax(0, 1fr));
-        margin-top: 8px;
+        margin-top: 6px;
+        flex: 1 1 auto;
+        overflow-y: auto;
+        padding-right: 4px;
       }
 
       .color-option {
         padding: 2px;
-        border-radius: 10px;
+        border-radius: 8px;
       }
 
       .color-swatch {
-        width: 60px;
-        height: 32px;
+        width: 56px;
+        height: 28px;
         border-radius: 6px;
       }
 
@@ -221,6 +237,7 @@
         border-width: 2px;
       }
 
+      /* 접힌 상태 "그리기" 버튼 */
       #toolbar-toggle {
         font-size: 15px;
         padding: 12px 22px;
@@ -616,5 +633,3 @@
   </script>
 </body>
 </html>
-
-
